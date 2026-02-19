@@ -102,7 +102,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                   {stats.totalBenchmarks}
                 </div>
                 <div className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                  Benchmarks
+                  Program-Fixer Benchmarks
                 </div>
               </CardContent>
             </Card>

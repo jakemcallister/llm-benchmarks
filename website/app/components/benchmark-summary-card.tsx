@@ -1,9 +1,9 @@
 import type { BenchmarkData, BenchmarkType } from '../types/benchmark';
-import { BENCHMARK_NAMES } from '../types/benchmark';
+import { BENCHMARK_NAMES, BENCHMARK_PATHS } from '../types/benchmark';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
-import { Calendar, Car, BookOpen, Coffee, TrendingUp, Users, ArrowRight } from 'lucide-react';
+import { Calendar, Car, BookOpen, Coffee, TrendingUp, Users, ArrowRight, Workflow } from 'lucide-react';
 import { Link } from 'react-router';
 import { getDifficultyLabel, getDifficultyVariant, getDifficultyColor } from '../lib/difficulty-utils';
 
@@ -18,7 +18,8 @@ export function BenchmarkSummaryCard({ benchmarkType, data }: BenchmarkSummaryCa
       calendar: <Calendar className="h-5 w-5" />,
       parking_garage: <Car className="h-5 w-5" />,
       school_library: <BookOpen className="h-5 w-5" />,
-      vending_machine: <Coffee className="h-5 w-5" />
+      vending_machine: <Coffee className="h-5 w-5" />,
+      keyword_delegation_proxy: <Workflow className="h-5 w-5" />
     };
     return icons[type];
   };
@@ -26,6 +27,16 @@ export function BenchmarkSummaryCard({ benchmarkType, data }: BenchmarkSummaryCa
   const calculateStats = () => {
     const aggregates = Object.values(data.aggregates);
     const totalModels = aggregates.length;
+
+    if (totalModels === 0) {
+      return {
+        totalModels: 0,
+        avgSuccessRate: 0,
+        avgQualityScore: 0,
+        topScore: 0
+      };
+    }
+
     const avgSuccessRate = aggregates.reduce((sum, agg) => sum + agg.metrics.success_rate, 0) / totalModels;
     const avgQualityScore = aggregates.reduce((sum, agg) => sum + agg.score_breakdown.quality_score, 0) / totalModels;
     const topScore = Math.max(...aggregates.map(agg => agg.score));
@@ -41,18 +52,8 @@ export function BenchmarkSummaryCard({ benchmarkType, data }: BenchmarkSummaryCa
   const stats = calculateStats();
   const benchmarkName = BENCHMARK_NAMES[benchmarkType];
 
-  const getBenchmarkPath = (type: BenchmarkType) => {
-    const paths = {
-      calendar: '/benchmarks/calendar',
-      parking_garage: '/benchmarks/parking-garage',
-      school_library: '/benchmarks/school-library',
-      vending_machine: '/benchmarks/vending-machine'
-    };
-    return paths[type];
-  };
-
   return (
-    <Link to={getBenchmarkPath(benchmarkType)} className="block group">
+    <Link to={BENCHMARK_PATHS[benchmarkType]} className="block group">
       <Card className="group-hover:shadow-2xl transition-all duration-300 shadow-lg cursor-pointer group-hover:translate-x-2 group-hover:translate-y-2 active:translate-x-4 active:translate-y-4 active:shadow-md border-2 border-border bg-card group-hover:bg-accent/50">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">

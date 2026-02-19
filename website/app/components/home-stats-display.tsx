@@ -12,7 +12,7 @@ export const HomeStatsDisplay = ({ stats }: HomeStatsDisplayProps) => (
   <div className="flex items-center justify-center gap-8 text-sm text-muted-foreground">
     <div className="flex items-center gap-2">
       <Target className="h-4 w-4" />
-      <span>{stats.totalBenchmarks} Benchmarks</span>
+      <span>{stats.totalBenchmarks} Program-Fixer Benchmarks</span>
     </div>
     <div className="flex items-center gap-2">
       <Zap className="h-4 w-4" />

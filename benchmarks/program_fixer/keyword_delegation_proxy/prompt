@@ -1,0 +1,138 @@
+Fix the broken Ruby code for a keyword delegation and callback safety system.
+
+This benchmark is intentionally Ruby-specific and focuses on:
+- keyword argument forwarding across proxies
+- `include` vs `prepend` behavior in method lookup
+- proc vs lambda behavior (`return` and arity)
+
+The provided code has 15+ bugs. You must fix all classes so they satisfy the behavior below.
+
+## Core Requirements
+
+### BillingClient
+
+- Implement `charge(customer_id, amount:, currency: 'USD', metadata: {}, notify: false, &block)`
+- Return a hash with keys: `:customer_id`, `:amount`, `:currency`, `:metadata`, `:notify`
+- Convert customer ID to string and amount to float
+- Yield payload to block when provided and store result at `:block_result`
+- Keep keyword arguments strict (unknown keywords should raise `ArgumentError`)
+
+### KeywordDelegationProxy
+
+- Initialize with target object
+- Delegate unknown methods with full forwarding of positional args, keyword args, and block
+- Implement `respond_to_missing?` correctly
+- Keep a `calls` array with call metadata
+
+### RetryProxy
+
+- Inherit from `KeywordDelegationProxy`
+- Add `charge(*args, retries: 0, **kwargs, &block)`
+- Consume `retries` in the proxy layer (do not pass it to `BillingClient`)
+- Retry on transient errors and return result hash merged with `attempts:` count
+
+### CurrencyNormalizer + InstrumentedBillingClient
+
+- `CurrencyNormalizer` should normalize currency to uppercase before calling `super`
+- `InstrumentedBillingClient < BillingClient`
+- Use `prepend CurrencyNormalizer` so lookup order applies correctly
+- Include `Taggable` module and ensure class-level override for `source_tag`
+
+### CallbackRunner
+
+- `run(callback, *args)` executes callback
+- `guarded_run(callback, *args)` rescues `LocalJumpError` and returns `:local_jump_error`
+- `callback_type(callback)` returns `:lambda` or `:proc`
+
+## Broken Code
+
+```ruby
+class BillingClient
+  def charge(customer_id, amount, currency: 'USD', metadata: {}, notify: false)
+    result = {
+      customer_id: customer_id,
+      amount: amount,
+      currency: currency,
+      metadata: [],
+      notify: notify
+    }
+
+    yield result if block_given?
+    result
+  end
+
+  def capability
+    'billing'
+  end
+end
+
+class KeywordDelegationProxy
+  attr_reader :target
+
+  def initialize(target)
+    target = @target
+    @calls = nil
+  end
+
+  def method_missing(name, *args, &block)
+    @calls << { name: name, args: args }
+    @target.send(name, args, &block)
+  end
+
+  def respond_to_missing?(name, include_private = false)
+    false
+  end
+end
+
+class RetryProxy < KeywordDelegationProxy
+  def charge(*args, retries: 0, **kwargs)
+    attempts = 0
+
+    begin
+      attempts += 1
+      target.charge(*args, kwargs)
+    rescue
+      retry if attempts < retries
+    end
+  end
+end
+
+module Taggable
+  def source_tag
+    'module-tag'
+  end
+end
+
+module CurrencyNormalizer
+  def charge(customer_id, amount:, currency: 'USD', metadata: {}, notify: false)
+    super(customer_id, amount: amount, currency: currency, metadata: metadata, notify: notify)
+  end
+end
+
+class InstrumentedBillingClient < BillingClient
+  include CurrencyNormalizer
+  prepend Taggable
+
+  def source_tag
+    'module-tag'
+  end
+end
+
+class CallbackRunner
+  def run(callback, *args)
+    callback[*args]
+  end
+
+  def guarded_run(callback, *args)
+    run(callback, *args)
+  rescue ArgumentError
+    :local_jump_error
+  end
+
+  def callback_type(callback)
+    callback.lambda? ? :proc : :lambda
+  end
+end
+```
+
+Return ONLY the fixed Ruby code without explanations.

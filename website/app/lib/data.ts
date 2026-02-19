@@ -1,4 +1,11 @@
-import type { BenchmarkData, BenchmarkType, ModelRanking, BenchmarkAggregate, BenchmarkResult } from '../types/benchmark'
+import {
+  BENCHMARK_TYPES,
+  type BenchmarkData,
+  type BenchmarkType,
+  type ModelRanking,
+  type BenchmarkAggregate,
+  type BenchmarkResult
+} from '../types/benchmark'
 import { getModelFamily } from './model-name-utils'
 
 // Date extraction and formatting utilities
@@ -73,11 +80,10 @@ export const loadBenchmarkData = async (benchmarkType: BenchmarkType, request?: 
 }
 
 export const loadAllBenchmarkData = async (request?: Request): Promise<Record<BenchmarkType, BenchmarkData>> => {
-  const benchmarkTypes: BenchmarkType[] = ['calendar', 'parking_garage', 'school_library', 'vending_machine']
   const results: Record<string, BenchmarkData> = {}
 
   await Promise.all(
-    benchmarkTypes.map(async (type) => {
+    BENCHMARK_TYPES.map(async (type) => {
       const data = await loadBenchmarkData(type, request)
       if (data) {
         results[type] = data
@@ -89,6 +95,8 @@ export const loadAllBenchmarkData = async (request?: Request): Promise<Record<Be
 }
 
 export function calculateTotalRankings(allData: Record<BenchmarkType, BenchmarkData>): ModelRanking[] {
+  const totalBenchmarkCount = Object.keys(allData).length;
+
   const modelScores: Record<string, {
     totalScore: number;
     benchmarkCount: number;
@@ -144,6 +152,8 @@ export function calculateTotalRankings(allData: Record<BenchmarkType, BenchmarkD
       tests_passed: scores.totalTestsPassed,
       total_tests: scores.totalTests,
       rubocop_offenses: scores.totalRubocopOffenses,
+      completed_benchmarks: scores.benchmarkCount,
+      total_benchmarks: totalBenchmarkCount,
       date: getDateForModel(implementation, scores.firstTimestamp)
     }))
     .sort((a, b) => b.score - a.score);
@@ -163,6 +173,8 @@ export function getBenchmarkRankings(data: BenchmarkData): ModelRanking[] {
         tests_passed: aggregate.metrics.tests_passed,
         total_tests: aggregate.metrics.total_tests,
         rubocop_offenses: aggregate.rubocop_offenses,
+        completed_benchmarks: 1,
+        total_benchmarks: 1,
         date: getDateForModel(implementation, result?.timestamp)
       };
     })
@@ -245,6 +257,8 @@ export function calculateBenchmarkStats(data: BenchmarkData) {
 }
 
 export function mergeRankingsAcrossBenchmarks(benchmarkRankings: ModelRanking[][]): ModelRanking[] {
+  const totalBenchmarkCount = benchmarkRankings.length;
+
   const modelScores: Record<string, {
     totalScore: number;
     benchmarkCount: number;
@@ -297,6 +311,8 @@ export function mergeRankingsAcrossBenchmarks(benchmarkRankings: ModelRanking[][
       tests_passed: scores.totalTestsPassed,
       total_tests: scores.totalTests,
       rubocop_offenses: Math.round(scores.totalRubocopOffenses / scores.benchmarkCount),
+      completed_benchmarks: scores.benchmarkCount,
+      total_benchmarks: totalBenchmarkCount,
       date: scores.firstDate || getDateForModel(implementation)
     }))
     .sort((a, b) => b.score - a.score);

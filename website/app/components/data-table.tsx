@@ -13,7 +13,7 @@ interface DataTableProps {
   title?: string
 }
 
-type SortField = 'implementation' | 'score' | 'success_rate' | 'quality_score' | 'date'
+type SortField = 'implementation' | 'score' | 'success_rate' | 'quality_score' | 'coverage' | 'date'
 type SortDirection = 'asc' | 'desc'
 
 const getScoreColor = (score: number): string => {
@@ -39,14 +39,33 @@ export const DataTable: React.FC<DataTableProps> = ({
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [searchTerm, setSearchTerm] = useState('')
   const [familyFilter, setFamilyFilter] = useState<string>('all')
+  const [coverageMode, setCoverageMode] = useState<'all' | 'complete'>('all')
+  const [minimumBenchmarksFilter, setMinimumBenchmarksFilter] = useState<string>('all')
+
+  const configuredBenchmarkCount = Object.keys(allData).length
 
   const modelFamilies = useMemo(() => {
     const families = new Set(data.map(model => getModelFamily(model.implementation)))
     return Array.from(families).sort()
   }, [data])
 
+  const hasCoverageTracking = useMemo(
+    () => configuredBenchmarkCount > 1 || data.some(model => model.total_benchmarks > 1),
+    [configuredBenchmarkCount, data]
+  )
+
+  const maxTotalBenchmarks = useMemo(
+    () => data.reduce((max, model) => Math.max(max, model.total_benchmarks), configuredBenchmarkCount),
+    [configuredBenchmarkCount, data]
+  )
+
+  const minBenchmarkOptions = useMemo(() => {
+    if (maxTotalBenchmarks <= 1) return []
+    return Array.from({ length: maxTotalBenchmarks }, (_, index) => index + 1)
+  }, [maxTotalBenchmarks])
+
   const sortedAndFilteredData = useMemo(() => {
-    let filtered = data
+    let filtered = [...data]
 
     // Apply search filter
     if (searchTerm) {
@@ -61,19 +80,48 @@ export const DataTable: React.FC<DataTableProps> = ({
       filtered = filtered.filter(model => getModelFamily(model.implementation) === familyFilter)
     }
 
-    // Apply sorting
-    return filtered.sort((a, b) => {
-      let aValue: number | string | Date = a[sortField]
-      let bValue: number | string | Date = b[sortField]
-
-      if (sortField === 'implementation') {
-        aValue = normalizeModelName(a.implementation)
-        bValue = normalizeModelName(b.implementation)
+    // Apply coverage filters for multi-benchmark ranking pages
+    if (hasCoverageTracking) {
+      if (coverageMode === 'complete') {
+        filtered = filtered.filter(model => model.completed_benchmarks >= model.total_benchmarks)
       }
 
-      if (sortField === 'date') {
-        aValue = a.date.getTime()
-        bValue = b.date.getTime()
+      if (minimumBenchmarksFilter !== 'all') {
+        const minBenchmarks = Number(minimumBenchmarksFilter)
+        filtered = filtered.filter(model => model.completed_benchmarks >= minBenchmarks)
+      }
+    }
+
+    // Apply sorting
+    return filtered.sort((a, b) => {
+      let aValue: number | string
+      let bValue: number | string
+
+      switch (sortField) {
+        case 'implementation':
+          aValue = normalizeModelName(a.implementation)
+          bValue = normalizeModelName(b.implementation)
+          break
+        case 'date':
+          aValue = a.date.getTime()
+          bValue = b.date.getTime()
+          break
+        case 'coverage':
+          aValue = (a.completed_benchmarks / Math.max(a.total_benchmarks, 1)) + (a.completed_benchmarks / 1000)
+          bValue = (b.completed_benchmarks / Math.max(b.total_benchmarks, 1)) + (b.completed_benchmarks / 1000)
+          break
+        case 'score':
+          aValue = a.score
+          bValue = b.score
+          break
+        case 'success_rate':
+          aValue = a.success_rate
+          bValue = b.success_rate
+          break
+        case 'quality_score':
+          aValue = a.quality_score
+          bValue = b.quality_score
+          break
       }
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -86,7 +134,7 @@ export const DataTable: React.FC<DataTableProps> = ({
         ? (aValue as number) - (bValue as number)
         : (bValue as number) - (aValue as number)
     })
-  }, [data, sortField, sortDirection, searchTerm, familyFilter])
+  }, [data, sortField, sortDirection, searchTerm, familyFilter, coverageMode, minimumBenchmarksFilter, hasCoverageTracking])
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -148,6 +196,46 @@ export const DataTable: React.FC<DataTableProps> = ({
             </div>
           </div>
         </div>
+
+        {hasCoverageTracking && (
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={coverageMode === 'all' ? 'default' : 'outline'}
+                onClick={() => setCoverageMode('all')}
+              >
+                Any Coverage
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={coverageMode === 'complete' ? 'default' : 'outline'}
+                onClick={() => setCoverageMode('complete')}
+              >
+                Full Coverage Only
+              </Button>
+            </div>
+
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <select
+                value={minimumBenchmarksFilter}
+                onChange={(e) => setMinimumBenchmarksFilter(e.target.value)}
+                className="pl-9 pr-8 py-2 border-2 border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent appearance-none shadow-lg"
+              >
+                <option value="all">Any Benchmark Count</option>
+                {minBenchmarkOptions.map((count) => (
+                  <option key={count} value={count}>
+                    {`At least ${count} benchmarks`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
         <div className="text-sm text-muted-foreground">
           Showing {sortedAndFilteredData.length} of {data.length} models
         </div>
@@ -168,6 +256,11 @@ export const DataTable: React.FC<DataTableProps> = ({
                 <th className="text-center p-3 font-medium w-12">
                   <SortButton field="score">Score</SortButton>
                 </th>
+                {hasCoverageTracking && (
+                  <th className="text-center p-3 font-medium w-20">
+                    <SortButton field="coverage" className="flex-row-reverse">Coverage</SortButton>
+                  </th>
+                )}
                 <th className="text-center p-3 font-medium w-14">
                   <SortButton field="success_rate" className="flex-row-reverse">Success Rate</SortButton>
                 </th>
@@ -182,7 +275,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                   <td className="p-3 w-32 lg:w-40">
                     <div className="flex items-center gap-2">
                       <div className="flex-shrink-0 w-6 h-6 bg-primary/10 border-2 border-primary/20 flex items-center justify-center text-xs font-medium text-primary">
-                        {sortedAndFilteredData.findIndex(m => m.implementation === model.implementation) + 1}
+                        {index + 1}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-foreground text-sm truncate">
@@ -190,6 +283,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                         </div>
                         <div className="text-xs text-muted-foreground sm:hidden truncate">
                           {getModelFamily(model.implementation)} • {formatDateShort(model.date)}
+                          {hasCoverageTracking ? ` • ${model.completed_benchmarks}/${model.total_benchmarks}` : ''}
                         </div>
                         <div className="text-xs text-muted-foreground md:hidden sm:block truncate">
                           {formatDateShort(model.date)}
@@ -212,6 +306,19 @@ export const DataTable: React.FC<DataTableProps> = ({
                       {model.score.toFixed(1)}
                     </Badge>
                   </td>
+                  {hasCoverageTracking && (
+                    <td className="p-3 text-center w-20">
+                      <Badge
+                        className={
+                          model.completed_benchmarks >= model.total_benchmarks
+                            ? 'border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                            : 'border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                        }
+                      >
+                        {model.completed_benchmarks}/{model.total_benchmarks}
+                      </Badge>
+                    </td>
+                  )}
                   <td className="p-3 text-center w-14">
                     <span className={getSuccessRateColor(model.success_rate)}>
                       {(model.success_rate * 100).toFixed(1)}%

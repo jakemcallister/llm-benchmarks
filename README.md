@@ -191,9 +191,58 @@ pnpm dev
 **Program Fixer Benchmarks** 🛠️
 
 - Calendar system debugging
+- Keyword delegation proxy semantics (Ruby keyword forwarding, prepend/include, proc/lambda)
 - Parking garage logic repair
 - School library management fixes
 - Vending machine state handling
+
+### 🧠 Why The `keyword_delegation_proxy` Benchmark Exists
+
+Ruby LLM outputs often look correct in simple examples but break on Ruby-specific semantics that appear in production wrappers/middleware.
+
+**What this benchmark is designed to catch**
+
+- Incorrect keyword forwarding across proxy/delegation layers (`*args`/`**kwargs`/block forwarding)
+- Incorrect `include` vs `prepend` assumptions in method lookup order
+- Proc/lambda semantic mistakes (`return` behavior, arity strictness)
+
+**Pros**
+
+- Tests language-level Ruby behavior, not just business-logic CRUD
+- Exposes subtle failures that commonly survive shallow test suites
+- Better stress test for “framework-style” code (proxies, decorators, wrappers)
+
+**Cons**
+
+- More advanced and less beginner-friendly than domain logic tasks
+- Can increase variance from tiny implementation differences in metaprogramming style
+- Requires careful tests to avoid overfitting to one implementation pattern
+
+### 📊 How Scoring Works
+
+Per benchmark:
+
+- **Program fixer score** = `(success_rate * 100 * 0.9) + (quality_score * 0.1)`
+- **Performance score** = combination of normalized best time, average time, and RuboCop quality
+
+Where:
+
+- `success_rate = tests_passed / total_tests`
+- `quality_score` is RuboCop-based (fewer offenses => higher score)
+
+Cross-benchmark aggregation:
+
+- CLI aggregate rankings (`bin/show_total_rankings`) average scores across all benchmarks in each type and treat missing benchmark results as `0` for that benchmark.
+- Website home rankings currently average over the benchmarks a model has completed (missing benchmarks are not included in that model's denominator).
+
+Does the new test contribute to overall score?
+
+- Yes. Once models have results for `keyword_delegation_proxy`, it is included in program-fixer aggregation in both CLI and website flows.
+
+### 💡 Suggestions / TODO
+
+- Add website leaderboard view modes: `Program Fixer`, `Performance`, and `Blended (All Benchmarks)`.
+- For `Blended`, show clear coverage (`X/Y`) and document how missing benchmark runs affect ranking.
 
 ## 🤝 Join the Fun!
 

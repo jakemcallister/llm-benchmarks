@@ -20,7 +20,8 @@ module Config
       'vending_machine' => { type: :program_fixer, class_name: 'VendingMachineBenchmark' },
       'calendar' => { type: :program_fixer, class_name: 'CalendarBenchmark' },
       'parking_garage' => { type: :program_fixer, class_name: 'ParkingGarageBenchmark' },
-      'school_library' => { type: :program_fixer, class_name: 'SchoolLibraryBenchmark' }
+      'school_library' => { type: :program_fixer, class_name: 'SchoolLibraryBenchmark' },
+      'keyword_delegation_proxy' => { type: :program_fixer, class_name: 'KeywordDelegationProxyBenchmark' }
     }
   end
 

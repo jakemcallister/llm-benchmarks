@@ -9,3 +9,5 @@ vendor/bundle/
 .mcp.json
 
 .vercel
+.rubocop_cache/
+.pnpm-store/

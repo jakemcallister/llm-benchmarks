@@ -4,10 +4,18 @@ import { useState } from "react"
 import { ThemeToggle } from "./theme-toggle"
 import { Button } from "./ui/button"
 import { Logo } from "./logo"
+import { BENCHMARK_PATHS, BENCHMARK_TYPES, type BenchmarkType } from "../types/benchmark"
 
 export const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const location = useLocation()
+  const benchmarkNavLabels: Record<BenchmarkType, string> = {
+    calendar: "Calendar",
+    parking_garage: "Parking Garage",
+    school_library: "School Library",
+    vending_machine: "Vending Machine",
+    keyword_delegation_proxy: "Keyword Proxy"
+  }
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen)
 
@@ -42,30 +50,15 @@ export const Header = () => {
           >
             Overall Rankings
           </Link>
-          <Link
-            to="/benchmarks/calendar"
-            className={getLinkClassName("/benchmarks/calendar")}
-          >
-            Calendar
-          </Link>
-          <Link
-            to="/benchmarks/parking-garage"
-            className={getLinkClassName("/benchmarks/parking-garage")}
-          >
-            Parking Garage
-          </Link>
-          <Link
-            to="/benchmarks/school-library"
-            className={getLinkClassName("/benchmarks/school-library")}
-          >
-            School Library
-          </Link>
-          <Link
-            to="/benchmarks/vending-machine"
-            className={getLinkClassName("/benchmarks/vending-machine")}
-          >
-            Vending Machine
-          </Link>
+          {BENCHMARK_TYPES.map((benchmarkType) => (
+            <Link
+              key={benchmarkType}
+              to={BENCHMARK_PATHS[benchmarkType]}
+              className={getLinkClassName(BENCHMARK_PATHS[benchmarkType])}
+            >
+              {benchmarkNavLabels[benchmarkType]}
+            </Link>
+          ))}
         </nav>
 
         <div className="flex items-center space-x-2">
@@ -105,34 +98,20 @@ export const Header = () => {
             >
               Overall Rankings
             </Link>
-            <Link
-              to="/benchmarks/calendar"
-              className={`block py-2 px-3 text-sm font-medium transition-colors hover:text-foreground/80 relative ${isActive("/benchmarks/calendar") ? "text-foreground font-semibold bg-primary/10 border-l-4 border-primary shadow-md" : "text-foreground/60"}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Calendar
-            </Link>
-            <Link
-              to="/benchmarks/parking-garage"
-              className={`block py-2 px-3 text-sm font-medium transition-colors hover:text-foreground/80 relative ${isActive("/benchmarks/parking-garage") ? "text-foreground font-semibold bg-primary/10 border-l-4 border-primary shadow-md" : "text-foreground/60"}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Parking Garage
-            </Link>
-            <Link
-              to="/benchmarks/school-library"
-              className={`block py-2 px-3 text-sm font-medium transition-colors hover:text-foreground/80 relative ${isActive("/benchmarks/school-library") ? "text-foreground font-semibold bg-primary/10 border-l-4 border-primary shadow-md" : "text-foreground/60"}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              School Library
-            </Link>
-            <Link
-              to="/benchmarks/vending-machine"
-              className={`block py-2 px-3 text-sm font-medium transition-colors hover:text-foreground/80 relative ${isActive("/benchmarks/vending-machine") ? "text-foreground font-semibold bg-primary/10 border-l-4 border-primary shadow-md" : "text-foreground/60"}`}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Vending Machine
-            </Link>
+            {BENCHMARK_TYPES.map((benchmarkType) => {
+              const path = BENCHMARK_PATHS[benchmarkType]
+
+              return (
+                <Link
+                  key={benchmarkType}
+                  to={path}
+                  className={`block py-2 px-3 text-sm font-medium transition-colors hover:text-foreground/80 relative ${isActive(path) ? "text-foreground font-semibold bg-primary/10 border-l-4 border-primary shadow-md" : "text-foreground/60"}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {benchmarkNavLabels[benchmarkType]}
+                </Link>
+              )
+            })}
           </nav>
         </div>
       )}

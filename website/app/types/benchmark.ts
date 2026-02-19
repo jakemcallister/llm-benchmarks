@@ -42,14 +42,33 @@ export interface ModelRanking {
   tests_passed: number;
   total_tests: number;
   rubocop_offenses: number;
+  completed_benchmarks: number;
+  total_benchmarks: number;
   date: Date;
 }
 
-export type BenchmarkType = 'calendar' | 'parking_garage' | 'school_library' | 'vending_machine';
+export const BENCHMARK_TYPES = [
+  'calendar',
+  'parking_garage',
+  'school_library',
+  'vending_machine',
+  'keyword_delegation_proxy'
+] as const;
+
+export type BenchmarkType = (typeof BENCHMARK_TYPES)[number];
 
 export const BENCHMARK_NAMES: Record<BenchmarkType, string> = {
   calendar: 'Calendar System',
   parking_garage: 'Parking Garage',
   school_library: 'School Library',
-  vending_machine: 'Vending Machine'
+  vending_machine: 'Vending Machine',
+  keyword_delegation_proxy: 'Keyword Delegation Proxy'
+};
+
+export const BENCHMARK_PATHS: Record<BenchmarkType, string> = {
+  calendar: '/benchmarks/calendar',
+  parking_garage: '/benchmarks/parking-garage',
+  school_library: '/benchmarks/school-library',
+  vending_machine: '/benchmarks/vending-machine',
+  keyword_delegation_proxy: '/benchmarks/keyword-delegation-proxy'
 };
